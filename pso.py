@@ -5,8 +5,6 @@ import os
 import tensorflow as tf
 from sklearn.metrics import confusion_matrix
 
-#初始化沒問題
-
 class _particle(object):
 
     def __init__(self, weight, speed):
@@ -32,8 +30,8 @@ def init_particle(amount, total_weight):
         weight = []
         speed = []
         for j in range(total_weight):
-            weight.append(np.random.uniform(-2,2))#常態分佈初始化權重
-            speed.append(np.random.uniform(-2,2))#常態分佈初始化速度
+            weight.append(np.random.uniform(-2,2))#initialize the weight of particle with normal distribution
+            speed.append(np.random.uniform(-2,2))#initialize the speed of particle with normal distribution
         p = _particle(weight, speed)#initial partical status
         #assert(len(p.weight)==540)
         particle.append(p)
@@ -60,7 +58,7 @@ class _model(object):
         s = 1 / (1 + np.exp(x))
         return s
 
-    def show_confuse(self):#算percision、recall
+    def show_confuse(self):#percision、recall
         precision = 0
         recall = 0
         f1score = 0
@@ -72,10 +70,10 @@ class _model(object):
         r = []
         d_sample = [0,0,0]
         total_sample = len(self.y)
-        #各類分別多少
+        #How many of each type
         for i in range(len(self.y)):
             d_sample[self.y[i].index(max(self.y[i]))] += 1
-        #各類比例
+        #How ratio of each type
         for i in range(3):#Weighted-average
             r.append(d_sample[i]/total_sample)
 
@@ -110,16 +108,16 @@ class _model(object):
     def reset_confuse(self):#
         self.confuse_matrix = [[0] * 4 for i in range(3)]
 
-    def add_layer(self, layer_unit):#新增網路層數
+    def add_layer(self, layer_unit):#add network layer
         self.layers.append(layer_unit)#[8,8,3]
 
-    def update_r(self, p):#更新r
+    def update_r(self, p):#update r parameter
         r = []
         for i in range(2):
             r.append(random.random())
         p.r = r
 
-    def update_w(self, T_max, t):#線性遞減公式
+    def update_w(self, T_max, t):#Linear Decrease Formula
         self.w = 0.9-(0.9-0.4)/T_max*t
 
     def update_weight(self, p):
@@ -131,16 +129,16 @@ class _model(object):
             for x in range(len(self.global_weight)):
                 v_local.append(2*p[i].r[0]*(p[i].local_best_weight[x]-p[i].weight[x]))
                 v_global.append(3*p[i].r[1]*(self.global_weight[x]-p[i].weight[x]))
-            #速度更新
+            #update speed
             for y in range(len(p[i].speed)):
-                v.append(self.w*p[i].speed[y]+v_local[y]+v_global[y])#公式三
-            #速度+-4
+                v.append(self.w*p[i].speed[y]+v_local[y]+v_global[y])#formula
+            #speed range 1~4
             for j in range(len(v)):
                 if v[j] > 1:
                     v[j] = 1
                 elif v[j] < -1:
                     v[j] = -1
-            #更新位置
+            #update position
             for z in range(len(p[i].weight)):
                 p[i].weight[z] += v[z]
             for k in range(len(p[i].weight)):
@@ -156,13 +154,13 @@ class _model(object):
     def fit(self, iteration):
         p = self._create_particle(self.particle_amount)#p is that have five particle
         iteration_ = 0
-        while iteration_ != iteration:#迭代次數
+        while iteration_ != iteration:#iteration times
             print("第%d次iteration"%(iteration_))
-            for h in range(len(p)):#跑每個粒子 
+            for h in range(len(p)):#iterate over each particle
                 total_MSE = 0
-                self.update_r(p[h])#更新r1,r2的值, r:[0, 1]的隨機值
+                self.update_r(p[h])#update r1,r2 value, r is a random value from 0 to 1
                 self.update_w(iteration, iteration_)
-                self.loss(p[h], h)#算適應值
+                self.loss(p[h], h)#calculate fitness
             p = self.update_weight(p)
             iteration_ += 1
         return p
@@ -234,7 +232,6 @@ class _model(object):
         '''
 
 
-    #要加activation_function
     def calculation(self, p, data_index):#caculate every data loss with one particle
         input_y = self.y[data_index]
         input_x = np.array(self.x[data_index])#one row data
@@ -250,7 +247,7 @@ class _model(object):
                     count+=1
                 unit_value = self.sigmoid(unit_value)#activation:sigmoid
                 next_input_data.append(unit_value)
-            input_x = np.array(next_input_data)#最後有三個值
+            input_x = np.array(next_input_data)
         predict = []
         for i in range(len(input_x)):
             predict.append(input_x[i]/sum(input_x))#normalization
@@ -283,8 +280,8 @@ class _model(object):
                     unit_value += input_x[j]*self.global_weight[count]+bias
                     count+=1
                 unit_value = self.sigmoid(unit_value)#activation:sigmoid
-                next_input_data.append(unit_value)#下一層輸入可以加activation_function
-            input_x = np.array(next_input_data)#最後有三個值
+                next_input_data.append(unit_value)
+            input_x = np.array(next_input_data)
         predict = []
         for i in range(len(input_x)):
             predict.append(input_x[i]/sum(input_x))#normalization
@@ -295,7 +292,7 @@ class _model(object):
         else:
             return self.CCE(input_x, input_y)
 
-#資料前處理
+#data preprocessing
 def data_process(path, file):
     input_data = pd.DataFrame()
     position = path + "/" + file 
@@ -316,7 +313,7 @@ def data_process(path, file):
     return x,y
             
 if __name__ == '__main__':
-    #讀資料
+    #loading dataset
     test_path = "C:/Users/TCU-2373-NB1/all_data/machine_learning/final_project/testing"
     files = os.listdir
     
@@ -331,9 +328,7 @@ if __name__ == '__main__':
     for file in files:
         x,y = data_process(train_path,file)
 
-        #training_position = train_path + "/" + file 
-        #df = pd.read_table(training_position, header=None)
-        #建立模型
+        #building model
         model = _model(x, y, 100, loss_fn="MSE")#1000
         model.add_layer(8)
         model.add_layer(8)
@@ -341,16 +336,15 @@ if __name__ == '__main__':
         #model.fit
         print("以下為第%d次訓練更改global_weight"%(count))
         p = model.fit(30)
-        #印當次的TP、FN、FP之後要更新
+        #results of the training phase
         print("第%d個檔案training:"%(count))
         model.show_confuse()
 
         model.reset_confuse()#model confuse matrix reset
 
-        #testing部分
+        #testing
         test_file = file.replace("training","testing")
         x,y = data_process(test_path, test_file)
-        #evaluate()q
         model._evaluate(x,y)
         print("第%d個檔案testing:"%(count))
         model.show_confuse()

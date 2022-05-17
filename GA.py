@@ -5,8 +5,6 @@ import os
 import tensorflow as tf
 from sklearn.metrics import accuracy_score
 
-#初始化沒問題
-
 class _gene(object):
 
     def __init__(self, weight):
@@ -18,7 +16,7 @@ def init_gene(amount, total_weight):
     for i in range(amount):
         weight = []
         for j in range(total_weight):
-            weight.append(np.random.uniform(-3,3))#常態分佈初始化權重
+            weight.append(np.random.uniform(-3,3))#initialized weights for normal distibution
         g = _gene(weight)#initial partical status
         gene.append(g)
         
@@ -56,10 +54,10 @@ class _model(object):
         r = []
         d_sample = [0,0,0]
         total_sample = len(self.y)
-        #各類分別多少
+        #How many of each type
         for i in range(len(self.y)):
             d_sample[self.y[i].index(max(self.y[i]))] += 1
-        #各類比例
+        #Proportion of each type
         for i in range(3):#Weighted-average
             r.append(d_sample[i]/total_sample)
 
@@ -87,7 +85,7 @@ class _model(object):
             total_accuracy += accuracy*r[i]
             total_precision += precision*r[i]
             total_recall += recall*r[i]
-            #print("%d:accuracy%f,precision%f,recall%f,f1score%f" % (i, accuracy, precision, recall, f1score))每一個類別分別為多少
+            #print("%d:accuracy%f,precision%f,recall%f,f1score%f" % (i, accuracy, precision, recall, f1score))
         if (total_precision+total_recall)>0:
             total_f1score = 2*total_precision*total_recall/(total_precision+total_recall)
         else:
@@ -98,28 +96,28 @@ class _model(object):
     def reset_confuse(self):#
         self.confuse_matrix = [[0] * 4 for i in range(3)]
 
-    def add_layer(self, layer_unit):#新增網路層數
+    def add_layer(self, layer_unit):#add network layer
         self.layers.append(layer_unit)
 
-    #新增mask    
+    #add mask    
     def create_mask(self, length):
         weight = []
         for j in range(length):
-            weight.append(random.randint(0,1))#0,1初始化mask
+            weight.append(random.randint(0,1))#initialize the mask with the range 0~1
         return weight
-    #選擇父代
+    #select parents
     def crossover(self, g, repeat):
         parent1 = _gene([])
         parent2 = _gene([])
         rand = 0 
         for i in range(len(g)):
             odd = random.random()
-            #希望越前面的染色體最高機率被選到,盡量不要重複選
+            #It is hoped to select the chromosome with the highest probability, and try not tot repeat the selection.
             if odd < 0.8*(100-i*10)/100*10/abs(10-repeat[i]*100):
                 parent1 = g[i]
                 repeat[i]+=1
                 break
-        #如果都沒選到就隨機選一條
+        #if none of them are selected, select one at random
         if len(parent1.weight)==0:
             rand = random.randint(0,len(g)-1)
             parent1 = g[rand]
@@ -138,7 +136,7 @@ class _model(object):
 
         return parent1,parent2
 
-    def update_weight(self, g):#g=所有母代
+    def update_weight(self, g):#g=all parents
         offspring = []
         count=0
         yn=1
@@ -152,8 +150,7 @@ class _model(object):
         position = 0
         pick_up = 0
         new_loss = 0
-
-        #判斷母體是否有重複的權重
+        #Judgement of  whether parents have duplicate weights
         for i in range(len(g)):
             for j in range(i+1,len(g)):
                 if g[i].fitness==g[j].fitness:
@@ -164,33 +161,33 @@ class _model(object):
                     new_loss = self.offspring_loss(g[j])
                     g[j].fitness = new_loss
         
-        #根據g的適應值排序
+        #Sort by fitness value of g
         for i in range(len(g)):
             g_loss.append(g[i].fitness)
 
         quicksort(g_loss, g, 0, len(g_loss)-1)#sort:loss、g
         for i in range(len(g)):
             g[i].fitness = g_loss[i]
-            #print("上面%d"%(i+1),g[i].fitness)
+            
         
-        #隨機挑兩個交配，使用均勻交配
+        #select two chromosome mating with Uniform Crossover 
         rand=0
         count=0
         while yn == 1:
             if len(offspring) < len(g):
-                #產生父代1,父代2
+                #generate parent1 and parent2
                 parent1, parent2 = self.crossover(g, repeat) 
                 
-                #產生mask
+                #generate mask
                 mask = self.create_mask(len(g[0].weight))
                 for i in range(len(mask)):
-                    if mask[i]==0:#如果mask[i]==0兩條作互換產生兩條子代
+                    if mask[i]==0:#if mask[i]==0, the two chromosome are exchanged to produce two children
                         temp = parent1.weight[i]
                         parent1.weight[i] = parent2.weight[i]
                         parent2.weight[i] = temp
                 offspring.append(parent1)
                 offspring.append(parent2)
-                #交配突變
+                #mating and mutation
                 repeat = [0 for i in range(len(g))]
                 parent1, parent2 = self.crossover(g, repeat)
                 if random.random() > 0.5:
@@ -203,22 +200,20 @@ class _model(object):
                             parent2.weight[position] = np.random.uniform(-3,3)#parent2.weight[position]+random.uniform(-0.01,0.01)
                 offspring.append(parent1)
                 offspring.append(parent2)
-            else:#離開迴圈
+            else:#break loop
                 yn=0
-        #print("repeat",repeat)
-        #評估子代適應值
-        for h in range(len(offspring)):#跑每一條基因
-            loss.append(self.offspring_loss(offspring[h]))#算適應值
+        #evaluate fitness of children
+        for h in range(len(offspring)):#iterate over each gene
+            loss.append(self.offspring_loss(offspring[h]))#calculate fitness value
         
         quicksort(loss, offspring, 0, len(loss)-1)#sort:loss、offspring
 
-        #選擇1/2子代如果loss值更低則取代母體offspring
+        #Select 1/2 offespring to replace the parent offspring if the loss value is lower
         for i in range(len(g)-int(len(g)/2),len(g)):
             if(g[i].fitness>loss[i-int(len(offspring)/2)+1]):
                 g[i].weight = offspring[i-int(len(offspring)/2)+1].weight
                 g[i].fitness = loss[i-int(len(offspring)/2)+1]
-        
-        #判斷最後替代完的母體是否有重複的權重
+        #judgement of whether the last replaced parent has repeated weights
         for i in range(len(g)):
             for j in range(i+1,len(g)):
                 if g[i].fitness==g[j].fitness:
@@ -248,13 +243,13 @@ class _model(object):
     def fit(self, iteration):
         g = self._create_gene(self.gene_amount)#g is that have five gene
         iteration_ = 0
-        while iteration_ != iteration:#迭代次數
+        while iteration_ != iteration:#iteration
             print("第%d次iteration"%(iteration_))
-            for h in range(len(g)):#跑每一條基因
-                self.loss(g[h])#算適應值
+            for h in range(len(g)):#iterate over each gene
+                self.loss(g[h])#calculate gene value
             g = self.update_weight(g)
             iteration_ += 1
-        #global_weight做confuse_matrix
+        #using global_weight make confuse_matrix
         self.y_pred=[]
         self.y_true=[]
         for i in range(len(self.x)):
@@ -271,7 +266,7 @@ class _model(object):
         g = init_gene(gene_amount, total_weight)
         return g
 
-    def loss(self, g):#g:某一條基因
+    def loss(self, g):#g:a gene
         total_loss = 0
         self.y_pred=[]
         self.y_true=[]
@@ -360,7 +355,7 @@ class _model(object):
                 unit_value += bias
                 unit_value = self.sigmoid(unit_value)#activation:sigmoid
                 next_input_data.append(unit_value)
-            #預測結果
+            #predict
             input_x = np.array(next_input_data)
         for i in range(len(input_x)):
             exp_output.append(np.exp(input_x[i]))
@@ -409,7 +404,7 @@ class _model(object):
                 unit_value += bias
                 unit_value = self.sigmoid(unit_value)#activation:sigmoid
                 next_input_data.append(unit_value)
-            input_x = np.array(next_input_data)#最後有三個值
+            input_x = np.array(next_input_data)
         #softmax
         for i in range(len(input_x)):
             exp_output.append(np.exp(input_x[i]))
@@ -447,7 +442,7 @@ def quicksort(loss, offspring, left, right):
 
 
 
-#資料前處理
+#data preprocessing
 def data_process(path, file):
     input_data = pd.DataFrame()
     position = path + "/" + file 
@@ -468,7 +463,7 @@ def data_process(path, file):
     return x,y
             
 if __name__ == '__main__':
-    #讀資料
+    #loading dataset
     test_path = "C:/Users/TCU-2373-NB1/all_data/machine_learning/final_project/testing"
     files = os.listdir
     
@@ -496,16 +491,16 @@ if __name__ == '__main__':
 
         #training_position = train_path + "/" + file 
         #df = pd.read_table(training_position, header=None)
-        #建立模型
+        #building model
         model = _model(x, y, 30, loss_fn="MSE")#1000
         model.add_layer(6)
         model.add_layer(3)
         #model.fit
         
         model.fit(200)
-        #得到train的結果
+        #get the result of train
         loss, accuracy, precision, recall, f1score = model.calculate_confuse()
-        #把檔案結果全部放到最後顯示
+        #put all the results of the file to the last display
         total_global_loss.append(loss)
         total_accuracy.append(accuracy)
         total_precision.append(precision)
@@ -513,14 +508,14 @@ if __name__ == '__main__':
         total_f1score.append(f1score)
         model.reset_confuse()#model confuse matrix reset
 
-        #testing部分
+        #testing
         test_file = file.replace("training","testing")
         x,y = data_process(test_path, test_file)
         #evaluate()
         model._evaluate(x,y)
-        #得到test的結果
+        #get result of testing
         loss, accuracy, precision, recall, f1score = model.calculate_confuse()
-        #把檔案結果全部放到最後顯示
+        #put all the results of the file to the last display
         total_global_loss.append(loss)
         total_accuracy.append(accuracy)
         total_precision.append(precision)
